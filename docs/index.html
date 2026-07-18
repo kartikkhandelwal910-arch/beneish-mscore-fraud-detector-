@@ -1,1 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beneish M-Score Screener — Forensic Earnings-Manipulation Detector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#12160f;
+    --ink-2:#181d16;
+    --paper:#ece4d1;
+    --paper-hi:#f6f1e3;
+    --redink:#a3382c;
+    --redink-bright:#c24a3a;
+    --brass:#a3822f;
+    --brass-hi:#c9a54a;
+    --slate:#8d9284;
+    --rule: rgba(236,228,209,0.14);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .bg-grid{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      linear-gradient(var(--rule) 1px, transparent 1px),
+      linear-gradient(90deg, var(--rule) 1px, transparent 1px);
+    background-size: 42px 42px;
+    opacity:0.35;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 90%);
+  }
+  .wrap{position:relative; z-index:1; max-width:1120px; margin:0 auto; padding:0 32px;}
+  h1,h2,h3{font-family:'Source Serif 4', serif; font-weight:600; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.16em; text-transform:uppercase;
+    color:var(--brass-hi); margin:0 0 14px 0; display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:""; width:22px; height:1px; background:var(--brass-hi); display:inline-block;}
+  a{color:inherit;}
+
+  /* ===== NAV ===== */
+  nav{
+    position:sticky; top:0; z-index:10;
+    backdrop-filter: blur(8px);
+    background:rgba(18,22,15,0.82);
+    border-bottom:1px solid var(--rule);
+  }
+  nav .wrap{display:flex; align-items:center; justify-content:space-between; padding-top:18px; padding-bottom:18px;}
+  .brand{font-family:'Source Serif 4', serif; font-size:18px; font-weight:600; letter-spacing:0.01em;}
+  .brand span{color:var(--redink-bright);}
+  .navlinks{display:flex; gap:28px; font-size:14px; font-family:'IBM Plex Mono', monospace;}
+  .navlinks a{text-decoration:none; color:var(--slate); transition:color .2s;}
+  .navlinks a:hover{color:var(--paper-hi);}
+  .btn{
+    font-family:'IBM Plex Mono', monospace; font-size:13px; letter-spacing:0.04em;
+    padding:10px 18px; border-radius:2px; text-decoration:none; display:inline-block;
+    border:1px solid var(--brass); color:var(--brass-hi); transition:all .2s;
+  }
+  .btn:hover{background:var(--brass); color:var(--ink);}
+  .btn.solid{background:var(--redink); border-color:var(--redink); color:var(--paper-hi);}
+  .btn.solid:hover{background:var(--redink-bright); border-color:var(--redink-bright);}
+
+  /* ===== HERO ===== */
+  header.hero{padding:100px 0 70px; position:relative;}
+  .hero-grid{display:grid; grid-template-columns:1.1fr 0.9fr; gap:56px; align-items:center;}
+  .hero h1{font-size:52px; line-height:1.08;}
+  .hero h1 em{font-style:normal; color:var(--redink-bright);}
+  .hero p.lede{font-size:18px; color:#cfc6ac; max-width:46ch; margin:22px 0 30px;}
+  .cta-row{display:flex; gap:14px; flex-wrap:wrap; margin-bottom:36px;}
+  .ticker-inline{
+    display:flex; gap:22px; flex-wrap:wrap; font-family:'IBM Plex Mono', monospace; font-size:12.5px; color:var(--slate);
+    border-top:1px solid var(--rule); padding-top:18px;
+  }
+  .ticker-inline b{color:var(--paper-hi); font-weight:500;}
+
+  /* ledger card / stamp visual */
+  .case-file{
+    background:var(--paper); color:var(--ink); border-radius:3px;
+    padding:26px 26px 22px; position:relative;
+    box-shadow: 0 30px 60px -20px rgba(0,0,0,0.55), 0 2px 0 rgba(0,0,0,0.2);
+    transform:rotate(-1.2deg);
+  }
+  .case-file .tag{font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:#7a6f52;}
+  .case-file h4{font-family:'Source Serif 4',serif; font-size:20px; margin:6px 0 16px; color:#1c1f16;}
+  .row{display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:13px; padding:7px 0; border-bottom:1px dashed rgba(20,20,10,0.18);}
+  .row span:first-child{color:#5c563f;}
+  .row span:last-child{font-weight:600;}
+  .flagged{color:var(--redink);}
+  .clean{color:#3d6b45;}
+  .stamp{
+    position:absolute; top:-14px; right:-18px; width:132px; height:132px;
+    border:3px solid var(--redink); border-radius:50%;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    transform:rotate(11deg);
+    color:var(--redink); font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:12.5px; letter-spacing:0.05em;
+    opacity:0.92; mix-blend-mode:multiply;
+  }
+  .stamp::before{
+    content:""; position:absolute; inset:6px; border:1px solid var(--redink); border-radius:50%; opacity:0.6;
+  }
+
+  /* ===== SECTION SHELL ===== */
+  section{padding:86px 0; border-top:1px solid var(--rule);}
+  .section-head{max-width:640px; margin-bottom:48px;}
+  .section-head h2{font-size:34px; margin-bottom:14px;}
+  .section-head p{color:var(--slate); font-size:16px;}
+
+  /* ===== RATIOS ===== */
+  .ratio-ledger{border-top:1px solid var(--rule);}
+  .ratio-row{
+    display:grid; grid-template-columns:110px 1fr auto; gap:24px; align-items:baseline;
+    padding:20px 0; border-bottom:1px solid var(--rule);
+  }
+  .ratio-row .code{font-family:'IBM Plex Mono',monospace; font-size:20px; color:var(--brass-hi); font-weight:600;}
+  .ratio-row .desc h5{margin:0 0 4px; font-family:'Source Serif 4',serif; font-size:17px; font-weight:600; color:var(--paper-hi);}
+  .ratio-row .desc p{margin:0; color:var(--slate); font-size:14.5px;}
+  .ratio-row .weight{font-family:'IBM Plex Mono',monospace; color:var(--slate); font-size:13px; text-align:right; white-space:nowrap;}
+
+  /* ===== PIPELINE ===== */
+  .pipeline{display:grid; grid-template-columns:repeat(4,1fr); gap:0; position:relative;}
+  .pipe-step{
+    border:1px solid var(--rule); border-left:none; padding:24px 20px; position:relative; min-height:150px;
+  }
+  .pipe-step:first-child{border-left:1px solid var(--rule);}
+  .pipe-step .k{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--brass-hi); letter-spacing:0.1em; text-transform:uppercase;}
+  .pipe-step h5{font-family:'Source Serif 4',serif; font-size:17px; margin:10px 0 8px; color:var(--paper-hi);}
+  .pipe-step p{font-size:13.5px; color:var(--slate); margin:0;}
+  .pipe-step::after{
+    content:"→"; position:absolute; right:-13px; top:50%; transform:translateY(-50%);
+    color:var(--brass); font-family:'IBM Plex Mono',monospace; font-size:16px; z-index:2;
+  }
+  .pipe-step:last-child::after{content:"";}
+
+  /* ===== CASE STUDIES ===== */
+  .cases{display:grid; grid-template-columns:repeat(3,1fr); gap:20px;}
+  .case-card{
+    border:1px solid var(--rule); padding:26px 22px; background:var(--ink-2); position:relative;
+  }
+  .case-card .m{font-family:'IBM Plex Mono',monospace; font-size:34px; color:var(--redink-bright); font-weight:600;}
+  .case-card .m span{font-size:14px; color:var(--slate); margin-left:8px; font-weight:400;}
+  .case-card h5{font-family:'Source Serif 4',serif; font-size:19px; margin:14px 0 8px; color:var(--paper-hi);}
+  .case-card p{font-size:13.5px; color:var(--slate); margin:0;}
+
+  /* ===== DISCLOSURES ===== */
+  .disclosures{background:var(--ink-2); border:1px solid var(--rule); padding:36px; }
+  .disclosures h3{font-size:16px; font-family:'IBM Plex Mono',monospace; color:var(--brass-hi); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:20px;}
+  .disc-item{padding:16px 0; border-bottom:1px solid var(--rule); font-size:14.5px; color:#c9c1a8;}
+  .disc-item:last-child{border-bottom:none;}
+  .disc-item b{color:var(--paper-hi); font-weight:600;}
+
+  /* ===== ARCHITECTURE STACK ===== */
+  .stack{display:flex; flex-direction:column; gap:1px; background:var(--rule);}
+  .stack .layer{background:var(--ink); padding:18px 22px; display:flex; justify-content:space-between; align-items:center;}
+  .stack .layer .file{font-family:'IBM Plex Mono',monospace; color:var(--brass-hi); font-size:14px;}
+  .stack .layer .desc{color:var(--slate); font-size:13.5px; text-align:right;}
+
+  /* ===== FOOTER / CTA ===== */
+  .final-cta{text-align:center; padding:100px 0;}
+  .final-cta h2{font-size:38px; max-width:16ch; margin:0 auto 20px;}
+  .final-cta p{color:var(--slate); max-width:44ch; margin:0 auto 34px;}
+  footer{border-top:1px solid var(--rule); padding:36px 0; font-size:13px; color:var(--slate); font-family:'IBM Plex Mono',monospace;}
+  footer .wrap{display:flex; justify-content:space-between; flex-wrap:wrap; gap:12px;}
+  footer a{color:var(--brass-hi); text-decoration:none;}
+
+  /* ===== MOTION ===== */
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(18px);} to{opacity:1; transform:translateY(0);} }
+  @keyframes stampIn{
+    0%{opacity:0; transform:rotate(11deg) scale(1.8);}
+    60%{opacity:1; transform:rotate(9deg) scale(0.94);}
+    100%{opacity:0.92; transform:rotate(11deg) scale(1);}
+  }
+  @keyframes shine{
+    from{ background-position:-200% center; }
+    to{ background-position:200% center; }
+  }
+
+  .hero > .wrap > div:first-child > *{ opacity:0; animation:fadeUp .7s ease forwards; }
+  .hero .eyebrow{ animation-delay:.05s; }
+  .hero h1{ animation-delay:.15s; }
+  .hero p.lede{ animation-delay:.3s; }
+  .hero .cta-row{ animation-delay:.45s; }
+  .hero .ticker-inline{ animation-delay:.6s; }
+
+  .hero h1{
+    background:linear-gradient(90deg, var(--paper) 20%, var(--brass-hi) 45%, var(--paper) 70%);
+    background-size:220% auto;
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:fadeUp .7s ease forwards .15s, shine 7s ease-in-out 1.2s infinite;
+  }
+  .hero h1 em{
+    background:linear-gradient(90deg, var(--redink-bright) 20%, #e8836f 45%, var(--redink-bright) 70%);
+    background-size:220% auto; -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:shine 7s ease-in-out 1.2s infinite;
+  }
+
+  .case-file{
+    opacity:0; animation:fadeUp .7s ease forwards .5s;
+    transition:transform .35s ease, box-shadow .35s ease;
+  }
+  .case-file:hover{
+    transform:rotate(0deg) scale(1.015);
+    box-shadow: 0 40px 80px -20px rgba(0,0,0,0.6), 0 2px 0 rgba(0,0,0,0.2);
+  }
+  .stamp{ animation:stampIn .9s cubic-bezier(.2,1.4,.4,1) forwards 1s; opacity:0; }
+
+  .btn{ position:relative; overflow:hidden; }
+  .btn::before{
+    content:""; position:absolute; top:0; left:-60%; width:40%; height:100%;
+    background:linear-gradient(120deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform:skewX(-20deg); transition:left .55s ease;
+  }
+  .btn:hover::before{ left:130%; }
+
+  .reveal{ opacity:0; transform:translateY(28px); transition:opacity .7s ease, transform .7s ease; }
+  .reveal.in-view{ opacity:1; transform:translateY(0); }
+
+  .case-card, .pipe-step{ transition:transform .3s ease, border-color .3s ease, box-shadow .3s ease; }
+  .case-card:hover{ transform:translateY(-6px); border-color:var(--brass); box-shadow:0 20px 40px -20px rgba(0,0,0,0.5); }
+  .pipe-step:hover{ transform:translateY(-4px); border-color:var(--brass); }
+  .ratio-row{ transition:background .25s ease, padding-left .25s ease; }
+  .ratio-row:hover{ background:rgba(201,165,74,0.05); padding-left:10px; }
+  .stack .layer{ transition:background .25s ease; }
+  .stack .layer:hover{ background:var(--ink-2); }
+
+  .navlinks a{ position:relative; }
+  .navlinks a::after{
+    content:""; position:absolute; left:0; bottom:-4px; width:0; height:1px; background:var(--brass-hi);
+    transition:width .25s ease;
+  }
+  .navlinks a:hover::after{ width:100%; }
+
+  @media (prefers-reduced-motion: reduce){
+    .hero > .wrap > div:first-child > *, .case-file, .stamp, .reveal{ animation:none !important; opacity:1 !important; transform:none !important; transition:none !important; }
+    .hero h1, .hero h1 em{ animation:none !important; background-position:0 center; }
+  }
+
+  @media (max-width:860px){
+    .hero-grid{grid-template-columns:1fr;}
+    .pipeline{grid-template-columns:1fr;}
+    .pipe-step{border-left:1px solid var(--rule); border-top:none;}
+    .pipe-step:first-child{border-top:1px solid var(--rule);}
+    .pipe-step::after{content:""; }
+    .cases{grid-template-columns:1fr;}
+    .hero h1{font-size:36px;}
+    .navlinks{display:none;}
+    .ratio-row{grid-template-columns:60px 1fr; }
+    .ratio-row .weight{grid-column:2; text-align:left; margin-top:4px;}
+  }
+  @media (prefers-reduced-motion: reduce){ html{scroll-behavior:auto;} }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<nav>
+  <div class="wrap">
+    <div class="brand">M‑SCORE<span>·</span>SCREENER</div>
+    <div class="navlinks">
+      <a href="#model">The Model</a>
+      <a href="#pipeline">Architecture</a>
+      <a href="#cases">Case Files</a>
+      <a href="#disclosures">Disclosures</a>
+    </div>
+    <a class="btn solid" href="https://beneish-mscore-screener.streamlit.app/" target="_blank" rel="noopener">Run a Screen →</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">Forensic Accounting · Live Data</p>
+      <h1>The model that<br>caught Enron.<br><em>Now it runs on any ticker.</em></h1>
+      <p class="lede">An 8-ratio earnings-manipulation screen, pulling real SEC EDGAR filings and Yahoo Finance statements across US and international exchanges — flagged two ways, cross-checked against history.</p>
+      <div class="cta-row">
+        <a class="btn solid" href="https://beneish-mscore-screener.streamlit.app/" target="_blank" rel="noopener">Run a Screen →</a>
+        <a class="btn" href="https://github.com/kartikkhandelwal910-arch/beneish-mscore-fraud-detector-" target="_blank" rel="noopener">View Source</a>
+      </div>
+      <div class="ticker-inline">
+        <span><b>AAPL</b> −2.71 clean</span>
+        <span><b>UAA</b> −1.42 flagged</span>
+        <span><b>RELIANCE.NS</b> −2.05 clean</span>
+        <span><b>NVDA</b> −2.63 clean</span>
+      </div>
+    </div>
+    <div class="case-file">
+      <div class="stamp">FLAGGED<br>M &gt; −1.78</div>
+      <p class="tag">Exhibit A — Sector-Relative Screen</p>
+      <h4>UAA — Under Armour, Inc.</h4>
+      <div class="row"><span>DSRI (Receivables Idx.)</span><span>1.14</span></div>
+      <div class="row"><span>SGAI (SG&amp;A Idx.)</span><span>1.09</span></div>
+      <div class="row"><span>TATA (Total Accruals)</span><span>0.061</span></div>
+      <div class="row"><span>Composite M-Score</span><span class="flagged">−1.42</span></div>
+      <div class="row" style="border-bottom:none;"><span>Peer Z-Score</span><span class="flagged">+2.3σ</span></div>
+    </div>
+  </div>
+</header>
+
+<section id="model" class="reveal">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">The Model</p>
+      <h2>Eight ratios. One verdict.</h2>
+      <p>Beneish's 1999 model condenses a full set of financial statements into eight indices, each capturing a different way earnings get quietly manipulated — inflated receivables, shrinking margins, capitalized expenses. Combined, they produce a single M-Score.</p>
+    </div>
+    <div class="ratio-ledger">
+      <div class="ratio-row">
+        <div class="code">DSRI</div>
+        <div class="desc"><h5>Days' Sales in Receivables Index</h5><p>Receivables growing faster than sales — a classic sign of channel-stuffing or premature revenue recognition.</p></div>
+        <div class="weight">×0.920</div>
+      </div>
+      <div class="ratio-row">
+        <div class="code">GMI</div>
+        <div class="desc"><h5>Gross Margin Index</h5><p>Deteriorating margins create pressure to manipulate earnings elsewhere in the statements.</p></div>
+        <div class="weight">×0.528</div>
+      </div>
+      <div class="ratio-row">
+        <div class="code">AQI</div>
+        <div class="desc"><h5>Asset Quality Index</h5><p>A rising share of soft, non-current assets — where costs get deferred instead of expensed.</p></div>
+        <div class="weight">×0.404</div>
+      </div>
+      <div class="ratio-row">
+        <div class="code">SGI</div>
+        <div class="desc"><h5>Sales Growth Index</h5><p>Fast growth isn't manipulation on its own, but it's where the pressure to manipulate is highest.</p></div>
+        <div class="weight">×0.892</div>
+      </div>
+      <div class="ratio-row">
+        <div class="code">DEPI</div>
+        <div class="desc"><h5>Depreciation Index</h5><p>A slowing depreciation rate can mean assets are being written down more slowly to flatter earnings.</p></div>
+        <div class="weight">×0.115</div>
+      </div>
+      <div class="ratio-row">
+        <div class="code">SGAI</div>
+        <div class="desc"><h5>SG&amp;A Index</h5><p>Disproportionate SG&amp;A growth relative to sales, often a sign of weakening cost discipline.</p></div>
+        <div class="weight">×0.172</div>
+      </div>
+      <div class="ratio-row">
+        <div class="code">LVGI</div>
+        <div class="desc"><h5>Leverage Index</h5><p>Rising leverage can create incentive to manipulate to stay within covenant thresholds.</p></div>
+        <div class="weight">×0.327</div>
+      </div>
+      <div class="ratio-row">
+        <div class="code">TATA</div>
+        <div class="desc"><h5>Total Accruals to Total Assets</h5><p>The gap between reported earnings and actual cash flow — the most direct accrual-quality signal.</p></div>
+        <div class="weight">×4.679</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="reveal">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Two Ways to Flag</p>
+      <h2>A fixed threshold, and a fairer one.</h2>
+      <p>Beneish's original −1.78 cutoff was calibrated on a mostly-industrial, pre-2000 US sample. It doesn't transfer cleanly to every sector — so every company is also scored against its own industry peers.</p>
+    </div>
+    <div class="cases">
+      <div class="case-card">
+        <div class="m" data-count="-1.78" data-decimals="2">0.00</div>
+        <h5>Academic Threshold</h5>
+        <p>Beneish's original 1999 cutoff. Scores above this line are flagged under the fixed, published model — useful as a common reference point across any dataset.</p>
+      </div>
+      <div class="case-card">
+        <div class="m">σ<span>peer z-score</span></div>
+        <h5>Sector-Relative Flag</h5>
+        <p>How unusual a company's score is versus same-SIC-code peers. Catches manipulation the fixed threshold misses in sectors that don't resemble Beneish's original sample.</p>
+      </div>
+      <div class="case-card">
+        <div class="m"><span class="count-num" data-count="3" data-decimals="0">0</span><span>known frauds</span></div>
+        <h5>Historical Sanity Check</h5>
+        <p>Every run is cross-referenced against Enron, WorldCom, and Under Armour — the model's own track record, annotated directly on the dashboard.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pipeline" class="reveal">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Architecture</p>
+      <h2>Where the numbers actually come from.</h2>
+      <p>US filers are pulled directly from SEC EDGAR's XBRL data — no third-party financial-data vendor in between. Everything else falls back to Yahoo Finance, and every row is tagged with its source so the two are never mistaken for one dataset.</p>
+    </div>
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="k">Step 1</div>
+        <h5>Route the ticker</h5>
+        <p>US SEC filer → EDGAR XBRL. Other exchange → Yahoo Finance. Every row tagged <span class="mono" style="color:var(--brass-hi)">data_source</span>.</p>
+      </div>
+      <div class="pipe-step">
+        <div class="k">Step 2</div>
+        <h5>Pull statements</h5>
+        <p>10–15+ years of US GAAP history from EDGAR; ~4 years of IFRS statements from Yahoo for international names.</p>
+      </div>
+      <div class="pipe-step">
+        <div class="k">Step 3</div>
+        <h5>Compute the score</h5>
+        <p>8-ratio Beneish M-Score, academic and sector-relative flagging, accounting-identity validation on every row.</p>
+      </div>
+      <div class="pipe-step">
+        <div class="k">Step 4</div>
+        <h5>Render the dashboard</h5>
+        <p>Trend line, peer comparison bar, ratio radar, and summary table — one live Streamlit app, no setup required.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="cases" class="reveal">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Coverage</p>
+      <h2>Built for more than the S&amp;P 500.</h2>
+      <p>US tickers run straight through EDGAR. International names route through Yahoo Finance by exchange suffix — read as directional versus US GAAP filings, not strictly apples-to-apples.</p>
+    </div>
+    <div class="stack">
+      <div class="layer"><span class="file">AAPL · MSFT · AMZN · NVDA</span><span class="desc">US — SEC EDGAR, US GAAP</span></div>
+      <div class="layer"><span class="file">RELIANCE.NS · TCS.NS</span><span class="desc">NSE, India — Yahoo, IFRS</span></div>
+      <div class="layer"><span class="file">BMW.DE</span><span class="desc">XETRA, Germany — Yahoo, IFRS</span></div>
+      <div class="layer"><span class="file">7203.T</span><span class="desc">TSE, Japan — Yahoo, IFRS</span></div>
+      <div class="layer"><span class="file">0700.HK · BHP.AX · SHOP.TO · VOD.L</span><span class="desc">HKEX / ASX / TSX / LSE — Yahoo, IFRS</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="disclosures" class="reveal">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Disclosures</p>
+      <h2>What this model can't do.</h2>
+      <p>A forensic tool that hides its own blind spots isn't a serious one. These are read verbatim off the model's own documentation.</p>
+    </div>
+    <div class="disclosures">
+      <h3>Known Limitations</h3>
+      <div class="disc-item"><b>Not meaningful for banks or insurers.</b> They don't report COGS or a classified balance sheet, so GMI, AQI, and LVGI can't be computed — the app detects this and warns explicitly.</div>
+      <div class="disc-item"><b>International results use IFRS, not US GAAP.</b> Ratios still compute, but cross-border comparisons should be read as directional, not precise.</div>
+      <div class="disc-item"><b>Shorter history outside the US.</b> Yahoo's free tier returns ~4 fiscal years versus 15+ from SEC XBRL — fewer year-over-year pairs, noisier ratios.</div>
+      <div class="disc-item"><b>Data warnings are heuristic.</b> 5% tolerance checks on the accounting identity, not a full double-entry reconciliation.</div>
+      <div class="disc-item"><b>No formal test suite yet.</b> Validated via synthetic edge cases — zero-revenue years, missing fields, mixed-source pipelines — rather than pytest.</div>
+    </div>
+  </div>
+</section>
+
+<section class="final-cta reveal" style="border-top:1px solid var(--rule);">
+  <div class="wrap">
+    <h2>Run it on a company you already know.</h2>
+    <p>Type in a ticker, and get a full sector-relative earnings-quality read in your browser — no setup, no login.</p>
+    <div class="cta-row" style="justify-content:center;">
+      <a class="btn solid" href="https://beneish-mscore-screener.streamlit.app/" target="_blank" rel="noopener">Run a Screen →</a>
+      <a class="btn" href="https://github.com/kartikkhandelwal910-arch/beneish-mscore-fraud-detector-" target="_blank" rel="noopener">Read the Code</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Built by Kartik Khandelwal — B.Com (Hons), ACCA candidate</span>
+    <span><a href="https://github.com/kartikkhandelwal910-arch/beneish-mscore-fraud-detector-" target="_blank" rel="noopener">GitHub</a> · <a href="https://beneish-mscore-screener.streamlit.app/" target="_blank" rel="noopener">Live App</a></span>
+  </div>
+</footer>
+
+<script>
+  // Scroll-reveal: fade + slide each section up as it enters the viewport
+  const revealEls = document.querySelectorAll('.reveal');
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        revealObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.15 });
+  revealEls.forEach(el => revealObserver.observe(el));
+
+  // Count-up animation for the big stat numbers, triggered once when visible
+  const countEls = document.querySelectorAll('[data-count]');
+  const countObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const target = parseFloat(el.getAttribute('data-count'));
+      const decimals = parseInt(el.getAttribute('data-decimals') || '0', 10);
+      const duration = 900;
+      const start = performance.now();
+      function tick(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = (target * eased).toFixed(decimals);
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+      countObserver.unobserve(el);
+    });
+  }, { threshold: 0.5 });
+  countEls.forEach(el => countObserver.observe(el));
+</script>
+</body>
+</html>
 
